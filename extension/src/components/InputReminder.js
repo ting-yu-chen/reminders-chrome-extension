@@ -1,55 +1,32 @@
 /*global chrome*/
 import Reminder from "./Reminder";
-
+import { useState, useEffect } from 'react'
 function InputReminder(props) {
-  function createReminder(reminder) {
-    const intervalLength = 3600000;
-    const now = new Date();
-    let untilNext_ms =
-      new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        reminder.time.hours,
-        reminder.time.minute,
-        0,
-        0
-      ).getTime() - Date.now();
-    untilNext_ms =
-      untilNext_ms < 0 ? untilNext_ms + intervalLength : untilNext_ms;
-    setTimeout(() => {
-      chrome.notifications.create({
-        type: "basic",
-        iconUrl: "notification.png",
-        title: reminder.title,
-        message: reminder.body,
-      });
-      setInterval(() => {
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "notification.png",
-          title: reminder.title,
-          message: reminder.body,
-        });
-      }, intervalLength);
-    }, untilNext_ms);
-
-    chrome.storage.sync.set({ [reminder.time.key]: reminder }, () => {});
-  }
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [time, setTime] = useState("");
 
   function submitHandler(event) {
     event.preventDefault();
-    const title = document.getElementById("msgTitle").value;
-    const body = document.getElementById("msgBody").value;
-    const time = document.getElementById("msgTime").value;
-
-    console.log(title, body, time);
-    const reminder = new Reminder(title, body, time);
-    chrome.storage.sync.set({ [time]: reminder }, () => {
-      console.log(reminder);
+    if (title.trim() === '' || body.trim === '' || !time.includes(':') ){
+      alert('Invalid Input');
+      return ; 
+    }
+    let reminder ;
+    try {
+      reminder = new Reminder(title, body, time);
+    } catch (e) {
+      alert(e);
+      return; 
+    }
+    chrome.runtime.sendMessage({reminder: reminder }, function(response) {
+      console.log(response);
+      props.update();
     });
-    createReminder(reminder);
-    props.update();
+    setTitle("");
+    setBody("");
+    setTime("");
+    
   }
 
   return (
@@ -58,16 +35,22 @@ function InputReminder(props) {
       <form id="form">
         <div class="form-group">
           <label>Title</label>
-          <input type="text" class="form-control" id="msgTitle" />
+          <input type="text" value={title} class="form-control" id="msgTitle" onChange={()=>{
+            setTitle(document.getElementById("msgTitle").value);
+          }} />
         </div>
         <div class="form-group">
           <label>Message</label>
-          <input type="text" class="form-control" id="msgBody" />
+          <input type="text" value={body} class="form-control" id="msgBody" onChange={()=>{
+            setBody(document.getElementById("msgBody").value);
+          }}/>
         </div>
 
         <div class="form-group">
           <label>Time</label>
-          <input type="text" class="form-control" id="msgTime" />
+          <input type="text" value={time} class="form-control" id="msgTime" onChange={()=>{
+            setTime(document.getElementById("msgTime").value);
+          }}/>
           <small>Format: MM:SS, e.g. 16:30</small>
         </div>
 

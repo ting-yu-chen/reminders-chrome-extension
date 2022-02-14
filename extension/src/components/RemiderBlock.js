@@ -1,29 +1,25 @@
 /*global chrome*/
 
 function ReminderBlock(props) {
-  function removeHandler(event) {
-    console.log(event.target, "target");
+  function removeHandler() {
     console.log(props, "target");
-    chrome.storage.sync.remove([props.time], ()=>{
-        console.log(`Reminder at ${props.time.time} is removed`);
-      });
+
+    chrome.storage.sync.get([props.time], (res) => {
+      clearTimeout(res[props.time].timer);
+    });
+    chrome.storage.sync.remove([props.time], () => {
+      console.log(`Reminder at ${props.time} is removed`);
+    });
     props.update();
   } 
   return (
     <div class="container">
-      <div class="row justify-content-between">
-        <span>
-          <li class="list-group-item">{`${props.time} - ${props.title}`}</li>
-        </span>
-        <span>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            onClick={removeHandler}>
-            Remove
-          </button>
-        </span>
-      </div>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        {`${props.time} - ${props.title}`}
+        <button type="button" class="btn btn-secondary" onClick={removeHandler}>
+          Remove
+        </button>
+      </li>
     </div>
   );
 }

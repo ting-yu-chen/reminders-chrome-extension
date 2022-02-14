@@ -2,17 +2,19 @@
 import ReminderBlock from "./RemiderBlock";
 import { useState, useEffect } from 'react'
 
-
 function ReminderList(props){
     const [reminders, setReminders] = useState([])
     
     function getReminderArray(storageAll){
         const tmp = [];
         for (const key in storageAll) {
-          tmp.push(storageAll[key]);
+            if (key !== "reminderCount"){
+                tmp.push(storageAll[key]);
+            }
         }
         setReminders(tmp);
-        console.log(reminders);
+        chrome.windows.reminderCount = tmp.length ; 
+        chrome.storage.sync.set({ "reminderCount": chrome.windows.reminderCount }, () => {});
     }
     useEffect(() => {
         chrome.storage.sync.get(null, (result)=>{
