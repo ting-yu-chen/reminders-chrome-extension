@@ -1,9 +1,18 @@
 /*global chrome*/
 
+chrome.runtime.onStartup.addListener(() => {
+  chrome.windows.reminderCount = 0;
+  chrome.storage.sync.set(
+    { reminderCount: chrome.windows.reminderCount },
+    () => {}
+  );
+});
+
+
 function createReminder(reminder) {
-  const intervalLength = 86400000;
+  const intervalLengthMins = 1440;
   const now = new Date();
-  let untilNext_ms =
+  let untilNextMins = (
     new Date(
       now.getFullYear(),
       now.getMonth(),
@@ -12,34 +21,16 @@ function createReminder(reminder) {
       reminder.time.minute,
       0,
       0
-    ).getTime() - Date.now();
-  untilNext_ms =
-    untilNext_ms < 0 ? untilNext_ms + intervalLength : untilNext_ms;
-  let timeoutId = setTimeout(() => {
-    chrome.notifications.create({
-      type: "basic",
-      iconUrl: "notification.png",
-      title: reminder.title,
-      message: reminder.body,
-    }, ()=>{
-        console.log("Notification sent")
+    ).getTime() - Date.now())/60000;
+    untilNextMins =
+    untilNextMins < 0 ? untilNextMins + intervalLengthMins : untilNextMins;
+    console.log('create: next ----->', untilNextMins);
+    chrome.alarms.create(reminder.time.key, {
+      periodInMinutes: intervalLengthMins,
+      delayInMinutes: untilNextMins
     });
-  }, untilNext_ms);
-  console.log(untilNext_ms, "milisecond");
-  reminder.timer = timeoutId;
+  
   chrome.storage.sync.set({ [reminder.time.key]: reminder }, () => {});
-}
-
-function recreateAllReminders() {
-  chrome.storage.sync.get(null, (storageAll) => {
-    console.log("recreate all");
-    for (const key in storageAll) {
-      if (key === "reminderCount") continue;
-      let reminder = storageAll[key];
-      clearTimeout(reminder.timer);
-      createReminder(reminder);
-    }
-  });
 }
 
 /*
@@ -49,7 +40,7 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
       `Storage key "${key}" in namespace "${namespace}" changed.`,
       `Old value was "${oldValue}", new value is "${newValue}".`
     );
-    if (key === "reminderCount" && oldValue === 0) {
+    if (key === "reminderCount" && (newValue === 0 || oldValue===0) ) {
       console.log("RESET ALL time out here");
       recreateAllReminders();
     }
@@ -64,18 +55,34 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   }
 });
 
+addEventListener('activate', e=>{
+  console.log('onactivate')
+  chrome.alarms.getAll(
+    (alarmArr)=>{
+      for(const alarm of alarmArr){
+        console.log(alarm);
+      }
+    }
+  )
+})
 
-chrome.idle.onStateChanged.addListener(
-   (state)=>{
-       console.log(state);
-       if (state === 'active'){
-         recreateAllReminders();
-       }
-   }
-)
 
-chrome.windows.reminderCount = 0;
-chrome.storage.sync.set(
-  { "reminderCount": chrome.windows.reminderCount },
-  () => {}
-);
+chrome.alarms.onAlarm.addListener(function(alarm) {
+  chrome.storage.sync.get(null, (storageAll) => {
+    for (const key in storageAll) {
+      if (key === "reminderCount") continue;
+      let reminder = storageAll[key];
+      if (alarm.name === reminder.time.key){
+        chrome.notifications.create({
+          type: "basic",
+          iconUrl: "notification.png",
+          title: reminder.title,
+          message: reminder.body,
+        }, ()=>{
+            console.log("Notification sent")
+        });
+        break; 
+      }
+    }
+  });
+});

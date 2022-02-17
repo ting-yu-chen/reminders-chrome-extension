@@ -10,6 +10,13 @@ function ReminderBlock(props) {
     chrome.storage.sync.remove([props.time], () => {
       console.log(`Reminder at ${props.time} is removed`);
     });
+
+    chrome.alarms.clear(
+      props.time,
+      ()=>{
+        console.log(`alarms with name ${props.time} is removed`);
+      } 
+    )
     props.update();
   } 
   return (

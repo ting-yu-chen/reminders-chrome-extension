@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Create reminder or notification for your personal developement.",
   "options_page": "option.html",
-  "permissions": ["storage", "notifications", "background","tabs", "idle"],
+  "permissions": ["storage", "notifications", "background","tabs", "idle", "alarms"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
